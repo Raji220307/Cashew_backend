@@ -6,6 +6,7 @@ const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
+// ✅ Register User
 export const registerUser = async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -16,12 +17,11 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || "user", 
+      role: role || "user",
     });
 
     res.status(201).json({
@@ -36,6 +36,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
+// ✅ Login User
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -55,5 +56,15 @@ export const loginUser = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Login failed", error: error.message });
+  }
+};
+
+// ✅ Get All Users (Admin only)
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to load users", error: error.message });
   }
 };

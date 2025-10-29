@@ -1,37 +1,41 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// ✅ Protect routes (only logged-in users)
 export const protect = async (req, res, next) => {
-  let token;
+  try {
+    
+    const authHeader = req.headers.authorization;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select("-password");
-
-      if (!req.user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      next();
-    } catch (error) {
-      console.error("JWT Error:", error.message);
-      return res.status(401).json({ message: "Not authorized, token failed" });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Not authorized, no token provided" });
     }
-  } else {
-    return res.status(401).json({ message: "Not authorized, no token" });
+
+    
+    const token = authHeader.split(" ")[1];
+
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    
+    req.user = user;
+
+    next(); 
+  } catch (error) {
+    console.error("Auth Middleware Error:", error.message);
+    res.status(401).json({ message: "Not authorized, token invalid or expired" });
   }
 };
 
-// ✅ Admin-only route protection
+
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+  if (req.user?.role?.toLowerCase() === "admin") {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admins only." });
